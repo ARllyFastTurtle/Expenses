@@ -6,8 +6,15 @@ expenses = []
 print ("Expenses")
 
 def add_expense(description, amount):
-    expenses.append({"description": description, "amount": amount})
-    print(f"Added expense: {description} - ${amount}")
+    try:
+        amount = int(amount)
+        if amount <= 0:
+            print("Amount must be greater than 0.")
+            return
+        expenses.append({"description": description, "amount": amount})
+        print(f"Added expense: {description} - ${amount}")
+    except ValueError:
+        print("Invalid amount. Please enter a whole number.")
 
 def view_expenses():
     print("Expenses:")
@@ -21,7 +28,16 @@ def update_expense(index, description, amount):
     if index < 1 or index > len(expenses):
         print("Invalid expense index.")
         return
-    expenses[index-1] = {"description": description, "amount": amount}
+    try:
+        amount = int(amount)
+        if amount <= 0:
+            print("Amount must be greater than 0.")
+            return
+    except ValueError:
+        print("Invalid amount. Please enter a number.")
+        return
+    index = int(index)
+    expenses[index-1] = {"description": description, "amount": float(amount)}
     print(f"Updated expense {index}: {description} - ${amount}")
 
 def delete_expense(index):
