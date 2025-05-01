@@ -1,18 +1,30 @@
 import argparse
+from datetime import datetime
 
 
 expenses = []
 
+def validate_date(date_str):
+    try:
+        # Try to parse the date in MM-DD-YYYY format
+        datetime.strptime(date_str, '%m-%d-%Y')
+        return True
+    except ValueError:
+        return False
+
 print ("Expenses")
 
-def add_expense(description, amount):
+def add_expense(description, amount, date):
     try:
         amount = int(amount)
         if amount <= 0:
             print("Amount must be greater than 0.")
             return
-        expenses.append({"description": description, "amount": amount})
-        print(f"Added expense: {description} - ${amount}")
+        if not validate_date(date):
+            print("Invalid date format. Please use MM-DD-YYYY format (e.g., 03-15-2024).")
+            return
+        expenses.append({"description": description, "amount": amount, "date": date})
+        print(f"Added expense: {description} - ${amount} - {date}")
     except ValueError:
         print("Invalid amount. Please enter a whole number.")
 
@@ -22,7 +34,7 @@ def view_expenses():
         print("No expenses recorded yet.")
     else:
         for i, expense in enumerate(expenses, 1):
-            print(f"{i}. {expense['description']} - ${expense['amount']}")
+            print(f"{i}. {expense['description']} - ${expense['amount']} - {expense['date']}")
 
 def update_expense(index, description, amount):
     if index < 1 or index > len(expenses):
@@ -66,7 +78,8 @@ def main():
             print("Add Expense:")
             description = input("Enter expense description: ")
             amount = input("Enter expense amount: $")
-            add_expense(description, amount)
+            date = input("Enter expense date (MM-DD-YYYY): ")
+            add_expense(description, amount, date)
         elif choice == "2":
             print ("View Expenses:")
             view_expenses()
