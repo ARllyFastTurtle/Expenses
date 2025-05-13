@@ -1,12 +1,30 @@
 import argparse
 from datetime import datetime
 import csv
-from tkinter import filedialog
-import tkinter as tk
+import os
+import sys
+import json
 
-print ("Expenses")
+print("Expenses")
 
-expenses = []
+# File to store expenses
+EXPENSES_FILE = "expenses.json"
+
+def load_expenses():
+    if os.path.exists(EXPENSES_FILE):
+        try:
+            with open(EXPENSES_FILE, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print("Error reading expenses file. Starting with empty list.")
+            return []
+    return []
+
+def save_expenses(expenses):
+    with open(EXPENSES_FILE, 'w') as f:
+        json.dump(expenses, f, indent=2)
+
+expenses = load_expenses()
 
 def validate_date(date_str):
     try:
@@ -25,6 +43,7 @@ def add_expense(description, amount, date):
             print("Invalid date format. Please use MM-DD-YYYY format (e.g., 03-15-2024).")
             return
         expenses.append({"description": description, "amount": amount, "date": date})
+        save_expenses(expenses)
         print(f"Added expense: {description} - ${amount} - {date}")
     except ValueError:
         print("Invalid amount. Please enter a whole number.")
@@ -54,12 +73,14 @@ def update_expense(index, description, amount, date):
         return
     index = int(index)
     expenses[index-1] = {"description": description, "amount": amount, "date": date}
+    save_expenses(expenses)
     print(f"Updated expense {index}: {description} - ${amount} - {date}")
 
 def delete_expense(index):
     try:
         if 1 <= index <= len(expenses):
             deleted_expense = expenses.pop(index - 1)
+            save_expenses(expenses)
             print(f"Deleted expense: {deleted_expense['description']} - ${deleted_expense['amount']} - {deleted_expense['date']}")
         else:
             print("Invalid expense index.")
@@ -88,30 +109,30 @@ def view_summary_month(month):
     return Total
     
 def export_expenses():
-    root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    print("\nExport Expenses")
+    print("Enter the full path where you want to save the CSV file")
+    print("Example: C:/Users/YourName/Desktop/expenses.csv")
+    file_path = input("Enter file path: ").strip()
     
-    # Open file dialog to choose save location
-    file_path = filedialog.asksaveasfilename(
-        defaultextension=".csv",
-        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-        title="Save Expenses as CSV"
-    )
-    
-    if file_path:  # If user didn't cancel
-        try:
-            with open(file_path, 'w', newline='') as file:
-                writer = csv.writer(file)
-                # Write header
-                writer.writerow(['Description', 'Amount', 'Date'])
-                # Write expenses
-                for expense in expenses:
-                    writer.writerow([expense['description'], expense['amount'], expense['date']])
-            print(f"Expenses exported successfully to {file_path}")
-        except Exception as e:
-            print(f"Error exporting expenses: {e}")
-    else:
+    if not file_path:
         print("Export cancelled")
+        return
+        
+    # Add .csv extension if not present
+    if not file_path.lower().endswith('.csv'):
+        file_path += '.csv'
+    
+    try:
+        with open(file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            # Write header
+            writer.writerow(['Description', 'Amount', 'Date'])
+            # Write expenses
+            for expense in expenses:
+                writer.writerow([expense['description'], expense['amount'], expense['date']])
+        print(f"Expenses exported successfully to {file_path}")
+    except Exception as e:
+        print(f"Error exporting expenses: {e}")
 
 def format_date_input(date_str):
     # Remove any existing dashes
@@ -126,63 +147,66 @@ def format_date_input(date_str):
     return date_str
 
 def main():
-    while True:
-        print("\nExpense Tracker")
-        print("1. Add Expense")
-        print("2. View Expenses")
-        print("3. Update Expense")
-        print("4. Delete Expense")
-        print("5. View Summary")
-        print("6. Export Expenses")
-        print("7. Exit")
+    parser = argparse.ArgumentParser(description='Expense Tracker')
+    parser.add_argument('--action', '-a', choices=['add', 'view', 'update', 'delete', 'summary', 'export'],
+                      help='Action to perform: add, view, update, delete, summary, or export')
+    parser.add_argument('--description', '-d', help='Expense description')
+    parser.add_argument('--amount', '-m', help='Expense amount')
+    parser.add_argument('--date', '-t', help='Expense date (MMDDYYYY)')
+    parser.add_argument('--index', '-i', type=int, help='Index of expense to update/delete')
+    parser.add_argument('--month', '-M', help='Month for summary (MM)')
+    parser.add_argument('--output', '-o', help='Output file path for export')
 
-        choice = input("Enter your choice: ")
+    args = parser.parse_args()
 
-        if choice == "1":
-            print("Add Expense:")
-            description = input("Enter expense description: ")
-            amount = input("Enter expense amount: $")
-            date = ""
-            while len(date) < 8:  # Keep accepting input until we have 8 digits
-                new_digit = input("Enter date (MMDDYYYY): ")
-                if new_digit.isdigit():
-                    date += new_digit
-                    formatted_date = format_date_input(date)
-                    print(f"Current date: {formatted_date}")
-            add_expense(description, amount, formatted_date)
-        elif choice == "2":
-            print ("View Expenses:")
-            view_expenses()
-        elif choice == "3":
-            print ("Update Expense:")
-            index = int(input("Enter the index of the expense to update: "))
-            description = input("Enter new description: ")
-            amount = input("Enter new amount: $")
-            date = ""
-            while len(date) < 8:  # Keep accepting input until we have 8 digits
-                new_digit = input("Enter date (MMDDYYYY): ")
-                if new_digit.isdigit():
-                    date += new_digit
-                    formatted_date = format_date_input(date)
-                    print(f"Current date: {formatted_date}")
-            update_expense(index, description, amount, formatted_date)
-        elif choice == "4":
-            print ("Delete Expense:")
-            index = int(input("Enter the index of the expense to delete: "))
-            delete_expense(index)
-        elif choice == "5":
-            month_input = input("Enter month (MM) or press enter: ")
-            if month_input == "":
-                view_summary()
-            else:
-                view_summary_month(month_input)
-        elif choice == "6":
-            print ("Export Expenses:")
-            export_expenses()
-        elif choice == "7":
-            print ("Exiting...")
-            break
-            
+    if not args.action:
+        print("Please specify an action using --action or -a")
+        print("Available actions: add, view, update, delete, summary, export")
+        sys.exit(1)
+
+    if args.action == 'add':
+        if not all([args.description, args.amount, args.date]):
+            print("Error: --description, --amount, and --date are required for adding expenses")
+            sys.exit(1)
+        formatted_date = format_date_input(args.date)
+        add_expense(args.description, args.amount, formatted_date)
+
+    elif args.action == 'view':
+        view_expenses()
+
+    elif args.action == 'update':
+        if not all([args.index, args.description, args.amount, args.date]):
+            print("Error: --index, --description, --amount, and --date are required for updating expenses")
+            sys.exit(1)
+        formatted_date = format_date_input(args.date)
+        update_expense(args.index, args.description, args.amount, formatted_date)
+
+    elif args.action == 'delete':
+        if not args.index:
+            print("Error: --index is required for deleting expenses")
+            sys.exit(1)
+        delete_expense(args.index)
+
+    elif args.action == 'summary':
+        if args.month:
+            view_summary_month(args.month)
+        else:
+            view_summary()
+
+    elif args.action == 'export':
+        if not args.output:
+            print("Error: --output is required for exporting expenses")
+            sys.exit(1)
+        try:
+            with open(args.output, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Description', 'Amount', 'Date'])
+                for expense in expenses:
+                    writer.writerow([expense['description'], expense['amount'], expense['date']])
+            print(f"Expenses exported successfully to {args.output}")
+        except Exception as e:
+            print(f"Error exporting expenses: {e}")
+
 if __name__ == "__main__":
     main()
                 
