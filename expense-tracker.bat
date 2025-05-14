@@ -1,1 +1,1 @@
-@py C:\Users\Matt\Desktop\Coding_projects\Expenses\expense-tracker %*
+@py C:\Users\"User"\Desktop\Coding_projects\Expenses\expense-tracker %*
