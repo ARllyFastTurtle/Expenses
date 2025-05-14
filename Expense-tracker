@@ -1,8 +1,8 @@
+#!/usr/bin/env python
 import argparse
 from datetime import datetime
 import csv
 import os
-import sys
 import json
 
 print("Expenses")
@@ -108,32 +108,6 @@ def view_summary_month(month):
     print(f"Total expenses for {month}/{current_year}: ${Total}")
     return Total
     
-def export_expenses():
-    print("\nExport Expenses")
-    print("Enter the full path where you want to save the CSV file")
-    print("Example: C:/Users/YourName/Desktop/expenses.csv")
-    file_path = input("Enter file path: ").strip()
-    
-    if not file_path:
-        print("Export cancelled")
-        return
-        
-    # Add .csv extension if not present
-    if not file_path.lower().endswith('.csv'):
-        file_path += '.csv'
-    
-    try:
-        with open(file_path, 'w', newline='') as file:
-            writer = csv.writer(file)
-            # Write header
-            writer.writerow(['Description', 'Amount', 'Date'])
-            # Write expenses
-            for expense in expenses:
-                writer.writerow([expense['description'], expense['amount'], expense['date']])
-        print(f"Expenses exported successfully to {file_path}")
-    except Exception as e:
-        print(f"Error exporting expenses: {e}")
-
 def format_date_input(date_str):
     # Remove any existing dashes
     date_str = date_str.replace('-', '')
@@ -148,55 +122,59 @@ def format_date_input(date_str):
 
 def main():
     parser = argparse.ArgumentParser(description='Expense Tracker')
-    parser.add_argument('--action', '-a', choices=['add', 'view', 'update', 'delete', 'summary', 'export'],
-                      help='Action to perform: add, view, update, delete, summary, or export')
-    parser.add_argument('--description', '-d', help='Expense description')
-    parser.add_argument('--amount', '-m', help='Expense amount')
-    parser.add_argument('--date', '-t', help='Expense date (MMDDYYYY)')
-    parser.add_argument('--index', '-i', type=int, help='Index of expense to update/delete')
-    parser.add_argument('--month', '-M', help='Month for summary (MM)')
-    parser.add_argument('--output', '-o', help='Output file path for export')
+    subparsers = parser.add_subparsers(dest='command', required=True)
+
+    # Add command
+    add_parser = subparsers.add_parser('add', help='Add a new expense')
+    add_parser.add_argument('--description', '-d', required=True, help='Expense description')
+    add_parser.add_argument('--amount', '-a', required=True, help='Expense amount')
+    add_parser.add_argument('--date', '-t', help='Expense date (MMDDYYYY)', default=datetime.now().strftime('%m%d%Y'))
+
+    # List command
+    list_parser = subparsers.add_parser('list', help='List all expenses')
+
+    # Update command
+    update_parser = subparsers.add_parser('update', help='Update an expense')
+    update_parser.add_argument('--id', '-i', type=int, required=True, help='ID of expense to update')
+    update_parser.add_argument('--description', '-d', required=True, help='Expense description')
+    update_parser.add_argument('--amount', '-a', required=True, help='Expense amount')
+    update_parser.add_argument('--date', '-t', required=True, help='Expense date (MMDDYYYY)')
+
+    # Delete command
+    delete_parser = subparsers.add_parser('delete', help='Delete an expense')
+    delete_parser.add_argument('--id', '-i', type=int, required=True, help='ID of expense to delete')
+
+    # Summary command
+    summary_parser = subparsers.add_parser('summary', help='Show expense summary')
+    summary_parser.add_argument('--month', '-m', help='Month for summary (MM)')
+
+    # Export command
+    export_parser = subparsers.add_parser('export', help='Export expenses to CSV')
+    export_parser.add_argument('--output', '-o', required=True, help='Output file path for export')
 
     args = parser.parse_args()
 
-    if not args.action:
-        print("Please specify an action using --action or -a")
-        print("Available actions: add, view, update, delete, summary, export")
-        sys.exit(1)
-
-    if args.action == 'add':
-        if not all([args.description, args.amount, args.date]):
-            print("Error: --description, --amount, and --date are required for adding expenses")
-            sys.exit(1)
+    if args.command == 'add':
         formatted_date = format_date_input(args.date)
         add_expense(args.description, args.amount, formatted_date)
 
-    elif args.action == 'view':
+    elif args.command == 'list':
         view_expenses()
 
-    elif args.action == 'update':
-        if not all([args.index, args.description, args.amount, args.date]):
-            print("Error: --index, --description, --amount, and --date are required for updating expenses")
-            sys.exit(1)
+    elif args.command == 'update':
         formatted_date = format_date_input(args.date)
-        update_expense(args.index, args.description, args.amount, formatted_date)
+        update_expense(args.id, args.description, args.amount, formatted_date)
 
-    elif args.action == 'delete':
-        if not args.index:
-            print("Error: --index is required for deleting expenses")
-            sys.exit(1)
-        delete_expense(args.index)
+    elif args.command == 'delete':
+        delete_expense(args.id)
 
-    elif args.action == 'summary':
+    elif args.command == 'summary':
         if args.month:
             view_summary_month(args.month)
         else:
             view_summary()
 
-    elif args.action == 'export':
-        if not args.output:
-            print("Error: --output is required for exporting expenses")
-            sys.exit(1)
+    elif args.command == 'export':
         try:
             with open(args.output, 'w', newline='') as file:
                 writer = csv.writer(file)
